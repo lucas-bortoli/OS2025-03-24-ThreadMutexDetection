@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
+#include <stack>
 
 ObjectHandle makeObjectHandle()
 {
@@ -80,6 +81,7 @@ ObjectHandle bortoli_alloc(ssize_t count)
         return INVALID_OBJECT_HANDLE;
     }
 
+    std::stack<PageIndex> allocated;
     ssize_t remaining_bytes = count;
     while (remaining_bytes > 0)
     {
@@ -88,7 +90,7 @@ ObjectHandle bortoli_alloc(ssize_t count)
 
         PageTableEntry entry = {
             .object = id,
-            .next_entry = 0,
+            .next_entry = 0, // <-- atualizado no próximo passo
             .used = (unsigned char)std::min(remaining_bytes, (ssize_t)sizeof(Page)),
         };
 
@@ -96,7 +98,22 @@ ObjectHandle bortoli_alloc(ssize_t count)
 
         printf("bortoli_alloc: página %u alocada: %u bytes\n", page_index, entry.used);
 
+        allocated.push(page_index);
         remaining_bytes -= sizeof(Page);
+    }
+
+    // corrigir next_entry para todas as páginas alocadas
+    if (allocated.size() > 0)
+    {
+        PageIndex last = allocated.top();
+        while (allocated.size() > 0)
+        {
+            PageIndex this_el = allocated.top();
+            (*table)[this_el].next_entry = last;
+            printf("bortoli_alloc: %u -> %u\n", this_el, last);
+            last = this_el;
+            allocated.pop();
+        }
     }
 
     allocator_mutex->unlock();

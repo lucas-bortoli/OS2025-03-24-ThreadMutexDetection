@@ -6,7 +6,7 @@
 #include <optional>
 
 #define PAGE_SIZE 64
-#define PAGE_COUNT 1024
+#define PAGE_COUNT 32
 
 typedef unsigned long ObjectHandle;
 
@@ -15,7 +15,7 @@ extern const ObjectHandle INVALID_OBJECT_HANDLE;
 struct PageTableEntry
 {
     ObjectHandle object;
-    unsigned int next_entry; /* 0 se não há uma "próxima" página deste objeto */
+    unsigned int next_entry; /* semântica: aponta pra ele mesmo se não há uma "próxima" página do objeto. */
     unsigned char used;
 };
 
