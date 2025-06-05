@@ -1,0 +1,32 @@
+#ifndef _H_BALLOC
+#define _H_BALLOC
+
+#include <cstdint>
+#include <cstdio>
+#include <optional>
+
+#define PAGE_SIZE 64
+#define PAGE_COUNT 1024
+
+typedef unsigned long ObjectHandle;
+
+extern const ObjectHandle INVALID_OBJECT_HANDLE;
+
+struct PageTableEntry
+{
+    ObjectHandle object;
+    unsigned int next_entry; /* 0 se não há uma "próxima" página deste objeto */
+    unsigned char used;
+};
+
+typedef char Page[PAGE_SIZE];
+
+void bortoli_allocator_init();
+
+ObjectHandle bortoli_alloc(ssize_t count);
+void bortoli_dealloc(ObjectHandle handle);
+void bortoli_read(ObjectHandle source, void* target, ssize_t bytes);
+void bortoli_write(void* source, ObjectHandle target, ssize_t bytes);
+void bortoli_defrag();
+
+#endif
