@@ -124,6 +124,21 @@ ObjectHandle bortoli_alloc(ssize_t count)
 void bortoli_dealloc(ObjectHandle handle)
 {
     printf("bortoli_dealloc: handle=%zu\n", handle);
+
+    allocator_mutex->lock();
+
+    for (PageIndex i = 0; i < PAGE_COUNT; i++)
+    {
+        if ((*table)[i].object == handle)
+        {
+            // para desalocar, é simples: basta tirar a referência ao objeto
+            (*table)[i].object = INVALID_OBJECT_HANDLE;
+            // a memória ainda está lá, e será sobrescrita quando possível
+            printf("bortoli_dealloc: desalocando página %u (objeto %zu)\n", i, handle);
+        }
+    }
+
+    allocator_mutex->unlock();
 }
 
 void bortoli_read(ObjectHandle source, void* target, ssize_t bytes)
