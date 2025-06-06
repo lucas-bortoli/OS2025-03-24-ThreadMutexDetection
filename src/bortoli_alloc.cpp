@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <mutex>
 #include <stack>
 
@@ -48,15 +49,15 @@ unsigned int count_free_pages()
     return count;
 }
 
-std::optional<PageIndex> find_free_page_index(PageIndex start_loc = 0)
+std::optional<PageIndex> find_first_page(ObjectHandle object, PageIndex start_loc = 0)
 {
     for (PageIndex i = start_loc; i < PAGE_COUNT; i++)
     {
-        if ((*table)[i].object == INVALID_OBJECT_HANDLE)
+        if ((*table)[i].object == object)
             return i;
     }
 
-    return std::nullopt; // não achamos nenhuma página livre
+    return std::nullopt; // não achamos nenhuma página correspondente
 }
 
 ObjectHandle bortoli_alloc(ssize_t count)
@@ -66,7 +67,7 @@ ObjectHandle bortoli_alloc(ssize_t count)
     // divisão ceil: https://stackoverflow.com/a/2745086
     unsigned int needed_page_count = (count + PAGE_SIZE - 1) / PAGE_SIZE;
 
-    printf("bortoli_alloc: count=%zu, object=%zu, pages=%d\n", count, id, needed_page_count);
+    printf("bortoli_alloc: count=%zu, handle=%zu, pages=%d\n", count, id, needed_page_count);
 
     // vamos alocar N páginas na tabela
     allocator_mutex->lock();
@@ -86,7 +87,8 @@ ObjectHandle bortoli_alloc(ssize_t count)
     while (remaining_bytes > 0)
     {
         // TODO não escanear do zero para TODAS as páginas, armazenar último index
-        auto page_index = find_free_page_index(0).value();
+        // procurar primeira página livre (não alocada)
+        auto page_index = find_first_page(INVALID_OBJECT_HANDLE, 0).value();
 
         PageTableEntry entry = {
             .object = id,
@@ -144,16 +146,58 @@ void bortoli_dealloc(ObjectHandle handle)
 void bortoli_read(ObjectHandle source, void* target, ssize_t bytes)
 {
     printf("bortoli_read: source=%zu, target=%p, count=%zu\n", source, target, bytes);
+
+    allocator_mutex->lock();
+
+    ssize_t read_bytes = 0;
+
+    while (read_bytes < bytes)
+    {
+        // TODO
+    }
+
+    allocator_mutex->unlock();
 }
 
-void bortoli_write(void* source, ObjectHandle target, ssize_t bytes)
+void bortoli_write(ObjectHandle target, void* source, ssize_t total_bytes)
 {
-    printf("bortoli_write: source=%p, target=%zu, count=%zu\n", source, target, bytes);
+    printf("bortoli_write: source=%p, target=%zu, count=%zu\n", source, target, total_bytes);
+
+    allocator_mutex->lock();
+
+    auto first_page = find_first_page(target);
+    if (!first_page.has_value())
+    {
+        printf("bortoli_write: objeto %zu não está alocado!\n", target);
+        exit(1);
+    }
+
+    PageIndex target_page = first_page.value();
+    ssize_t copied_bytes = 0;
+    while (copied_bytes < total_bytes)
+    {
+        ssize_t copy_amount = std::min((ssize_t)sizeof(Page), total_bytes - copied_bytes);
+
+        char* source_ptr = (char*)source + copied_bytes;
+        char* dest_ptr = (char*)pages[target_page];
+
+        printf("bortoli_write: copiando %zu bytes de %p para página %u (%p)\n", copy_amount, source_ptr, target_page,
+               dest_ptr);
+        std::memcpy(dest_ptr, source_ptr, copy_amount);
+
+        copied_bytes += copy_amount;
+        target_page = (*table)[target_page].next_entry;
+    }
+
+    allocator_mutex->unlock();
 }
 
 void bortoli_defrag()
 {
     printf("bortoli_defrag\n");
+
+    allocator_mutex->lock();
+    allocator_mutex->unlock();
 }
 
 void defrag()

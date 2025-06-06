@@ -26,7 +26,7 @@ void bortoli_allocator_init();
 ObjectHandle bortoli_alloc(ssize_t count);
 void bortoli_dealloc(ObjectHandle handle);
 void bortoli_read(ObjectHandle source, void* target, ssize_t bytes);
-void bortoli_write(void* source, ObjectHandle target, ssize_t bytes);
+void bortoli_write(ObjectHandle target, void* source, ssize_t total_bytes);
 void bortoli_defrag();
 
 #endif
