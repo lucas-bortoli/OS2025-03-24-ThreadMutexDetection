@@ -12,24 +12,20 @@ int main(int argc, char** argv)
     // testes
     // bortoli_write(&handle, handle, 32);
 
-    while (true)
-    {
-        ObjectHandle handle = bortoli_alloc(16);
+    char* original = "abc";
+    const uint8_t original_size = strlen(original) + 1;
+    char copia[original_size];
 
-        printf("main: handle %zu\n", handle);
+    ObjectHandle handle = bortoli_alloc(16);
 
-        const char* texto = "Hello Goiás!";
+    printf("main: minha string original: %s\n", original);
 
-        printf("main: minha string: %s\n", texto);
+    bortoli_write(handle, original, original_size);
+    bortoli_read(handle, copia, original_size);
 
-        bortoli_write(handle, &texto, strlen(texto));
-
-        // talvez desalocar, talvez não...
-        if (std::rand() % 4 > 2)
-            bortoli_dealloc(handle);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    printf("main: minha string copia: %s\n", &copia);
+    printf("main: minha string copia: %X %X %X %X\n", copia[0], copia[1], copia[2], copia[3]);
+    printf("main: minha string original: %s\n", original);
 
     return 0;
 }

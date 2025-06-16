@@ -143,23 +143,45 @@ void bortoli_dealloc(ObjectHandle handle)
     allocator_mutex->unlock();
 }
 
-void bortoli_read(ObjectHandle source, void* target, ssize_t bytes)
+void bortoli_read(ObjectHandle source, char* target, ssize_t total_bytes)
 {
-    printf("bortoli_read: source=%zu, target=%p, count=%zu\n", source, target, bytes);
+    printf("bortoli_read: source=%zu, target=%p, count=%zu\n", source, target, total_bytes);
 
     allocator_mutex->lock();
 
-    ssize_t read_bytes = 0;
-
-    while (read_bytes < bytes)
+    auto first_page = find_first_page(source);
+    if (!first_page.has_value())
     {
-        // TODO
+        printf("bortoli_read: objeto %zu não está alocado!\n", source);
+        exit(1);
+    }
+
+    PageIndex source_page = first_page.value();
+    ssize_t read_bytes = 0;
+    while (read_bytes < total_bytes)
+    {
+        ssize_t remaining = total_bytes - read_bytes;
+        ssize_t copy_amount = std::min(remaining, (ssize_t)sizeof(Page));
+
+        char* source_ptr = (char*)pages[source_page];
+        char* dest_ptr = (char*)target + read_bytes;
+
+        printf("bortoli_read: %X %X %X %X\n", (char)*(source_ptr), (char)*(source_ptr + 1), (char)*(source_ptr + 2),
+               (char)*(source_ptr + 3));
+
+        printf("bortoli_read: lendo %zu bytes da página %u (%p) para %p\n", copy_amount, source_page, source_ptr,
+               dest_ptr);
+
+        std::memcpy(dest_ptr, source_ptr, copy_amount);
+
+        read_bytes += copy_amount;
+        source_page = (*table)[source_page].next_entry;
     }
 
     allocator_mutex->unlock();
 }
 
-void bortoli_write(ObjectHandle target, void* source, ssize_t total_bytes)
+void bortoli_write(ObjectHandle target, const char* source, ssize_t total_bytes)
 {
     printf("bortoli_write: source=%p, target=%zu, count=%zu\n", source, target, total_bytes);
 
@@ -180,6 +202,9 @@ void bortoli_write(ObjectHandle target, void* source, ssize_t total_bytes)
 
         char* source_ptr = (char*)source + copied_bytes;
         char* dest_ptr = (char*)pages[target_page];
+
+        printf("bortoli_write: %x %x %x %x\n", *(source_ptr)&0xff, *(source_ptr + 1) & 0xff, *(source_ptr + 2) & 0xff,
+               *(source_ptr + 3) & 0xff);
 
         printf("bortoli_write: copiando %zu bytes de %p para página %u (%p)\n", copy_amount, source_ptr, target_page,
                dest_ptr);
