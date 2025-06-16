@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <optional>
 
-#define PAGE_SIZE 64
+#define PAGE_SIZE 8
 #define PAGE_COUNT 32
 
 typedef unsigned long ObjectHandle;
@@ -28,5 +28,7 @@ void bortoli_dealloc(ObjectHandle handle);
 void bortoli_read(ObjectHandle source, char* target, ssize_t bytes);
 void bortoli_write(ObjectHandle target, const char* source, ssize_t total_bytes);
 void bortoli_defrag();
+
+void bortoli_print_table();
 
 #endif

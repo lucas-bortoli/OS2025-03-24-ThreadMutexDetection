@@ -32,6 +32,11 @@ void bortoli_allocator_init()
     table = (PageTable*)std::malloc(sizeof(PageTable));
     pages = (Heap*)std::malloc(sizeof(Heap));
 
+    for (PageIndex i = 0; i < PAGE_COUNT; i++)
+    {
+        table[i]->object = INVALID_OBJECT_HANDLE;
+    }
+
     printf("Alocador iniciado! %d páginas, heap %zu bytes total (%zu kB) -- table %zu bytes total\n", PAGE_COUNT,
            sizeof(Heap), sizeof(Heap) / 1024, sizeof(PageTable));
 }
@@ -42,7 +47,7 @@ unsigned int count_free_pages()
 
     for (PageIndex i = 0; i < PAGE_COUNT; i++)
     {
-        if ((*table)[i].object == 0)
+        if (table[i]->object == INVALID_OBJECT_HANDLE)
             count++;
     }
 
@@ -53,7 +58,7 @@ std::optional<PageIndex> find_first_page(ObjectHandle object, PageIndex start_lo
 {
     for (PageIndex i = start_loc; i < PAGE_COUNT; i++)
     {
-        if ((*table)[i].object == object)
+        if (table[i]->object == object)
             return i;
     }
 
@@ -90,15 +95,11 @@ ObjectHandle bortoli_alloc(ssize_t count)
         // procurar primeira página livre (não alocada)
         auto page_index = find_first_page(INVALID_OBJECT_HANDLE, 0).value();
 
-        PageTableEntry entry = {
-            .object = id,
-            .next_entry = 0, // <-- atualizado no próximo passo
-            .used = (unsigned char)std::min(remaining_bytes, (ssize_t)sizeof(Page)),
-        };
+        table[page_index]->object = id;
+        table[page_index]->next_entry = 0; // <-- atualizado no próximo passo
+        table[page_index]->used = (unsigned char)std::min(remaining_bytes, (ssize_t)sizeof(Page));
 
-        (*table)[page_index] = entry;
-
-        printf("bortoli_alloc: página %u alocada: %u bytes\n", page_index, entry.used);
+        printf("bortoli_alloc: página %u alocada: %u bytes\n", page_index, table[page_index]->used);
 
         allocated.push(page_index);
         remaining_bytes -= sizeof(Page);
@@ -215,6 +216,22 @@ void bortoli_defrag()
     printf("bortoli_defrag\n");
 
     allocator_mutex->lock();
+
+    allocator_mutex->unlock();
+}
+
+void bortoli_print_table()
+{
+    allocator_mutex->lock();
+
+    for (PageIndex i = 0; i < PAGE_COUNT; i++)
+    {
+        if (table[i]->object == INVALID_OBJECT_HANDLE)
+            continue;
+
+        printf("Table[%d]\tObj: %d\n\n", i, table[i]->object);
+    }
+
     allocator_mutex->unlock();
 }
 
