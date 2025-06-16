@@ -166,12 +166,8 @@ void bortoli_read(ObjectHandle source, char* target, ssize_t total_bytes)
         char* source_ptr = (char*)pages[source_page];
         char* dest_ptr = (char*)target + read_bytes;
 
-        printf("bortoli_read: %X %X %X %X\n", (char)*(source_ptr), (char)*(source_ptr + 1), (char)*(source_ptr + 2),
-               (char)*(source_ptr + 3));
-
         printf("bortoli_read: lendo %zu bytes da página %u (%p) para %p\n", copy_amount, source_page, source_ptr,
                dest_ptr);
-
         std::memcpy(dest_ptr, source_ptr, copy_amount);
 
         read_bytes += copy_amount;
@@ -202,9 +198,6 @@ void bortoli_write(ObjectHandle target, const char* source, ssize_t total_bytes)
 
         char* source_ptr = (char*)source + copied_bytes;
         char* dest_ptr = (char*)pages[target_page];
-
-        printf("bortoli_write: %x %x %x %x\n", *(source_ptr)&0xff, *(source_ptr + 1) & 0xff, *(source_ptr + 2) & 0xff,
-               *(source_ptr + 3) & 0xff);
 
         printf("bortoli_write: copiando %zu bytes de %p para página %u (%p)\n", copy_amount, source_ptr, target_page,
                dest_ptr);
